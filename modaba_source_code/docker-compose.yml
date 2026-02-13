@@ -1,0 +1,68 @@
+services:
+  modaba-postgres:
+    image: postgis/postgis:17-3.5-alpine
+    container_name: modaba-postgres
+    restart: always
+    network_mode: host  # host 네트워크 사용
+    environment:
+      TZ: ${TIMEZONE:-Asia/Seoul}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-c204}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ssafy#204}
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-initSchema.sql
+      - ./data.sql:/docker-entrypoint-initdb.d/02-initData.sql
+    # ports 제거 (host 모드에서는 불필요)
+    # healthcheck는 유지 가능
+
+  modaba-redis:
+    image: redis:7-alpine
+    container_name: modaba-redis
+    restart: always
+    network_mode: host  # host 네트워크 사용
+    command: redis-server --appendonly yes
+    volumes:
+      - ./redis_data:/data
+    # ports 제거 (host 모드에서는 불필요)
+
+  modaba-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: modaba-backend:latest
+    container_name: modaba-backend
+    restart: on-failure
+    network_mode: host  # host 네트워크 사용
+    env_file: .env
+    
+    environment:
+      # 시스템 설정
+      TZ: Asia/Seoul
+      
+      # Database 설정 (localhost 사용)
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/${POSTGRES_DB:-postgres}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-c204}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-ssafy#204}
+      
+      # Redis 설정 (localhost 사용)
+      SPRING_DATA_REDIS_HOST: localhost
+      SPRING_DATA_REDIS_PORT: 6379
+      
+      # 카카오 OAuth
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      KAKAO_REDIRECT_URL: ${KAKAO_REDIRECT_URL}
+      
+      # 네이버 OAuth
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
+      NAVER_REDIRECT_URL: ${NAVER_REDIRECT_URL}
+    
+    # ports 제거 (host 모드에서는 불필요)
+    # depends_on은 유지 가능하지만 healthcheck는 제한적
+    depends_on:
+      - modaba-postgres
+      - modaba-redis
+
+# networks 섹션 제거 (host 모드 사용 시 불필요)
