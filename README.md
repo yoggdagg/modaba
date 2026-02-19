@@ -10,19 +10,21 @@
   <br/>
 
   ![Java](https://img.shields.io/badge/Java-21-007396?style=flat-square&logo=openjdk&logoColor=white)
-  ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+  ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.1-6DB33F?style=flat-square&logo=springboot&logoColor=white)
   ![Android](https://img.shields.io/badge/Android-Kotlin-3DDC84?style=flat-square&logo=android&logoColor=white)
   ![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2BPostGIS-17-4169E1?style=flat-square&logo=postgresql&logoColor=white)
   ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)
   ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
+  ![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?style=flat-square&logo=jenkins&logoColor=white)
+  ![CloudFlare](https://img.shields.io/badge/Cloudflare-DNS%2FSSL-F38020?style=flat-square&logo=cloudflare&logoColor=white)
 </div>
 
 ---
 
 ## 📖 프로젝트 소개
 
-**모다바**는 친구들과 함께 밖으로 나가 즐길 수 있는 **위치 기반 모바일 게임 플랫폼**입니다.
-실시간 GPS 추적과 카카오맵을 활용하여 **경도**, **약속**, **집중** 세 가지 모드를 제공하며,
+**모다바**는 친구들과 함께 밖으로 나가 즐길 수 있는 **위치 기반 모바일 게임 플랫폼**입니다.  
+실시간 GPS 추적과 카카오맵을 활용하여 **경도**, **약속**, **집중** 세 가지 모드를 제공하며,  
 MMR 기반 랭킹 시스템과 소셜 기능으로 경쟁과 협력의 재미를 더했습니다.
 
 ---
@@ -81,10 +83,12 @@ MMR 기반 랭킹 시스템과 소셜 기능으로 경쟁과 협력의 재미를
 |------|------|
 | **Android Client** | Kotlin, Jetpack Compose, Material3, Navigation Compose |
 | | Retrofit2, OkHttp, Kakao Maps SDK, Google Play Services Location |
-| **Backend** | Java 21, Spring Boot, Gradle 8.5 |
+| **Backend** | Java 21, Spring Boot 4.0.1, Gradle 8.5 |
 | **Database** | PostgreSQL 17 + PostGIS 3.5 (공간 데이터), Redis 7 |
 | **인증** | JWT, Kakao OAuth2, Naver OAuth2 |
-| **인프라** | Docker, Docker Compose |
+| **인프라** | Docker, Docker Compose, Linux Ubuntu (Host Network Mode) |
+| **CI/CD** | Jenkins 파이프라인 + Mattermost 빌드 알림 |
+| **네트워크** | Nginx Proxy Manager (리버스 프록시), Cloudflare (DNS / SSL·TLS) |
 
 ---
 
@@ -120,14 +124,36 @@ modaba/
 - Python 3 (지역 데이터 초기화 시)
 - Android Studio (클라이언트 빌드 시)
 - Kakao / Naver 개발자 앱 키 발급
+- Linux Ubuntu 서버 환경 (host 네트워크 모드 사용)
 
-### 1. 환경 변수 설정
+### 1. 빌드 환경
 
-`modaba_source_code/` 디렉토리에 `.env` 파일을 생성합니다.
+| 구분 | 상세 |
+|------|------|
+| **OS (Server)** | Linux Ubuntu (Host Network Mode) |
+| **OS (Mobile)** | Android 11 이상 |
+| **Build SDK** | Gradle 8.5 / JDK 21 (Alpine 기반) |
+| **Runtime JRE** | Eclipse Temurin 21 (JRE Alpine 기반) |
+| **Framework** | Spring Boot 4.0.1, Android Studio |
+| **Database** | PostGIS 17 (Docker), Redis 7 (Docker) |
+
+> ⚠️ **포트 주의사항**: `network_mode: host` 설정으로 동작하므로, 호스트 OS의  
+> **5432**(PostgreSQL), **6379**(Redis), **8080**(Backend) 포트 점유 여부를 반드시 확인하세요.
+
+### 2. 환경 변수 설정
+
+`modaba_source_code/` 디렉토리에 `.env` 파일을 생성합니다. (실제 시크릿값은 `exec/.env` 파일 참조)
 
 ```env
+# Server Config
+SERVER_PORT=8080
 TIMEZONE=Asia/Seoul
-POSTGRES_DB=postgres
+
+# Security
+JWT_SECRET=your_jwt_secret
+
+# PostgreSQL
+POSTGRES_DB=your_db_name
 POSTGRES_USER=your_db_user
 POSTGRES_PASSWORD=your_db_password
 
@@ -140,29 +166,59 @@ KAKAO_REDIRECT_URL=your_kakao_redirect_url
 NAVER_CLIENT_ID=your_naver_client_id
 NAVER_CLIENT_SECRET=your_naver_client_secret
 NAVER_REDIRECT_URL=your_naver_redirect_url
+
+# Google
+GOOGLE_APPLICATION_PASSWORD=your_google_app_password
 ```
 
-### 2. 백엔드 실행 (Docker Compose)
+### 3. 백엔드 빌드 및 배포
 
 ```bash
 cd modaba_source_code
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-> 로컬 개발 환경에서는 `docker-compose -f docker-compose-local.yml up -d` 사용
+**Docker 멀티스테이지 빌드 프로세스**
 
-### 3. 지역 데이터 초기화
+1. **Build Stage**: `gradle:8.5-jdk21-alpine` 환경에서 `clean bootJar` 수행
+2. **Runtime Stage**: `eclipse-temurin:21-jre-alpine` 환경으로 빌드된 `app.jar`만 복사하여 경량화된 컨테이너 실행
+
+> 로컈 개발 환경에서는 `docker-compose -f docker-compose-local.yml up -d --build` 사용
+
+### 4. DB 초기화
+
+Docker 컨테이너 **최초 실행 시** 아래 스크립트가 순차적으로 실행되어 DB 스키마와 기초 데이터를 구성합니다.
+
+```
+schema.sql  →  /docker-entrypoint-initdb.d/01-initSchema.sql
+data.sql    →  /docker-entrypoint-initdb.d/02-initData.sql
+```
+
+행정구역 데이터는 별도 스크립트로 초기화합니다:
 
 ```bash
 cd modaba_source_code
 python3 init_regions.py
 ```
 
-### 4. Android 클라이언트 빌드
+### 5. Android 클라이언트 빌드
 
 1. Android Studio에서 `modaba_source_code/client/android` 경로를 프로젝트로 열기
 2. `local.properties`에 서버 주소 및 Kakao Maps Native App Key 추가
-3. 디바이스 또는 에뮬레이터에서 실행 (minSdk **26** 이상)
+3. 디바이스 또는 에뮬레이터에서 실행 (**minSdk 26 / Android 8.0** 이상)
+
+---
+
+## 🔗 외부 서비스 연동
+
+| 서비스 | 설명 |
+|--------|------|
+| **Kakao OAuth 2.0** | 카카오 로그인 (Callback URL 설정 필요) |
+| **Naver OAuth 2.0** | 네이버 로그인 (Callback URL 설정 필요) |
+| **Jenkins** | CI/CD 파이프라인 자동화 |
+| **Mattermost** | Jenkins 빌드 성공/실패 알림 |
+| **Cloudflare** | DNS 관리 및 SSL/TLS 암호화 |
+| **Nginx Proxy Manager** | 리버스 프록시 및 호스트 포트 라우팅 |
 
 ---
 
