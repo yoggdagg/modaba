@@ -1,0 +1,83 @@
+server:
+  port: 0
+
+spring:
+  sql:
+    init:
+      mode: always
+  application:
+    name: server-test
+  
+  # 테스트용 H2 DB 설정 (DB 이름 변경하여 캐시 회피)
+  datasource:
+    url: jdbc:h2:mem:testdb_v2;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  jwt:
+    secret: this_is_a_temporary_test_secret_key_at_least_32_chars_long
+    access-token-validity-in-seconds: 3600s # 단위 명시 (s)
+    refresh-token-validity-in-seconds: 1209600s # 단위 명시 (s)
+
+  paths:
+    public-paths:
+      - "/"
+      - "/api/auth/login"
+      - "/api/auth/signup"
+      - "/api/auth/refresh"
+      - "/api/v0/auth/**"
+      - "/v3/api-docs/**"
+      - "/swagger-ui/**"
+      - "/swagger-ui.html"
+      - "/swagger-resources/**"
+      - "/error/**"
+      - "/radio-test.html"
+    protected-paths:
+      - "/api/v0/**"
+
+  mail:
+    host: localhost
+    port: 1025
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+            required: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
+  # Spring AI 라이브러리용 테스트 설정
+  ai:
+    openai:
+      api-key: "test-api-key"
+      base-url: "https://test-proxy"
+      chat:
+        options:
+          model: "gpt-4o-mini"
+
+# 커스텀 AI 설정 (AiProperties용)
+custom:
+  ai:
+    model: "test-model"
+    api-key: "test-api-key"
+    url: "test.url"
+    proxy-url: "test-proxy"
+
+api:
+  naver:
+    client_id: test_naver_client_id
+    client_secret: test_naver_client_secret
+  kakao:
+    rest_api_key: test_kakao_rest_api_key
+    client_secret: test_kakao_client_secret
+    redirect_uri: http://localhost:8080/login/oauth2/code/kakao
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml

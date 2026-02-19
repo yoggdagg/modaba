@@ -1,0 +1,79 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+  application:
+    name: server
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: '${DB_PASSWORD}'
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-validity-in-seconds: ${JWT_ACCESS_TOKEN_VALIDITY_IN_SECONDS:3600}
+    refresh-token-validity-in-seconds: ${JWT_REFRESH_TOKEN_VALIDITY_IN_SECONDS:1209600}
+  paths:
+    public-paths:
+      - "/"
+      - "/api/auth/login"
+      - "/api/auth/signup"
+      - "/api/auth/refresh"
+      - "/api/v0/auth/**"
+      - "/v3/api-docs/**"
+      - "/swagger-ui/**"
+      - "/swagger-ui.html"
+      - "/swagger-resources/**"
+      - "/error/**"
+      - "/radio-test.html"
+    protected-paths:
+      - "/api/v0/**"
+      - "/api/v0/activities/**"
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: teammodaba@gmail.com
+    password: ${GOOGLE_APPLICATION_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
+  # Spring AI 설정 (SSAFY GMS 게이트웨이 적용)
+  ai:
+    openai:
+      base-url: https://gms.ssafy.io/gmsapi/api.openai.com
+      api-key: ${AI_KEY:sk-dummy-key-for-bean-creation}
+      chat:
+        options:
+          model: gpt-4o-mini
+
+api: 
+  naver:
+   client_id: ${NAVER_CLIENT_ID} 
+   client_secret: ${NAVER_CLIENT_SECRET}
+  kakao: 
+   rest_api_key: ${KAKAO_REST_API_KEY}
+   client_secret: ${KAKAO_CLIENT_SECRET}
+   redirect_uri: ${KAKAO_REDIRECT_URL}
+
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+
+game:
+  test-mode: true # 테스트 모드 활성화 (닉네임 기반 역할 부여)

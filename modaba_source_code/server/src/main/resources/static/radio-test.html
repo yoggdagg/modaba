@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>📻 경도 무전기 최종 테스트</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #263238; color: white; display: flex; justify-content: center; padding: 50px; }
+        .card { background: #37474f; width: 100%; max-width: 500px; padding: 30px; border-radius: 20px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; margin: 5px; transition: 0.2s; }
+        .btn-blue { background: #2196F3; color: white; }
+        .btn-red { background: #f44336; color: white; }
+        .ptt-btn { 
+            width: 180px; height: 180px; border-radius: 50%; background: #cfd8dc; color: #37474f; 
+            font-size: 24px; font-weight: bold; border: 10px solid #546e7a; cursor: pointer; margin: 30px 0;
+        }
+        .ptt-btn:active { background: #ff5252; color: white; transform: scale(0.95); }
+        .ptt-btn:disabled { background: #455a64; color: #78909c; cursor: not-allowed; }
+        .log { height: 100px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; font-family: monospace; font-size: 11px; text-align: left; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Kyungdo Radio Test</h2>
+    
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="email" value="test@example.com" style="padding: 10px; border-radius: 5px; border: none; width: 40%;">
+        <input type="password" id="password" value="password123!" style="padding: 10px; border-radius: 5px; border: none; width: 30%;">
+        <button id="login-btn" class="btn btn-blue">로그인</button>
+    </div>
+
+    <button id="connect-btn" class="btn btn-blue" disabled>웹소켓 연결</button>
+    <div id="conn-status" style="font-size: 12px; margin-top: 5px; color: #90a4ae;">상태: 미연결</div>
+
+    <div style="margin-top: 15px;">
+        <label><input type="checkbox" id="loopback-chk"> 루프백 모드 (서버 에코 테스트)</label>
+    </div>
+
+    <button id="ptt-btn" class="ptt-btn" disabled>PTT</button>
+    
+    <p style="font-size: 14px; color: #b0bec5;">버튼을 누른 채로 말하고 떼세요!</p>
+
+    <div class="log" id="log">준비 완료.</div>
+</div>
+
+<script>
+    let token = null;
+    let stomp = null;
+    let recorder = null;
+    let chunks = [];
+
+    const logger = document.getElementById('log');
+    function log(m) {
+        const d = document.createElement('div');
+        d.textContent = `> ${m}`;
+        logger.appendChild(d);
+        logger.scrollTop = logger.scrollHeight;
+    }
+
+    // 1. 로그인 (토큰 자동 세팅)
+    document.getElementById('login-btn').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        try {
+            const r = await fetch('/api/v0/auth/log-in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (!r.ok) {
+                const err = await r.json();
+                log('로그인 실패: ' + (err.message || r.statusText));
+                return;
+            }
+
+            const d = await r.json();
+            token = d.accessToken;
+            log('로그인 성공! 닉네임: ' + d.nickname);
+            document.getElementById('connect-btn').disabled = false;
+        } catch (e) { 
+            log('로그인 오류: ' + e.message); 
+        }
+    };
+
+    // 2. 웹소켓 연결 & 구독 (무전 전용 엔드포인트 사용)
+    document.getElementById('connect-btn').onclick = () => {
+        // 일반 채팅은 /ws-stomp, 무전은 /ws-radio를 사용합니다.
+        const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws-radio';
+        stomp = Stomp.client(url);
+        stomp.connect({ 'Authorization': 'Bearer ' + token }, () => {
+            log('무전 서버 연결 성공! (/ws-radio)');
+            document.getElementById('conn-status').textContent = '상태: 연결됨 (POLICE 채널)';
+            document.getElementById('conn-status').style.color = '#4CAF50';
+            document.getElementById('ptt-btn').disabled = false;
+            
+            // JWT 디코딩하여 userId 추출 (루프백 구독용)
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const userId = payload.userId;
+            log('내 유저 ID: ' + userId);
+
+            // 1. 팀 채널 구독 (Room ID: 1, Team: POLICE 고정)
+            stomp.subscribe(`/sub/voice/team/1/POLICE`, (msg) => {
+                const data = JSON.parse(msg.body);
+                log(`📡 수신(팀): ${data.audioData.length} bytes`);
+                play(data.audioData);
+            });
+
+            // 2. 루프백 전 전용 채널 구독
+            stomp.subscribe(`/sub/voice/loopback/${userId}`, (msg) => {
+                const data = JSON.parse(msg.body);
+                log(`🔄 루프백 수신: ${data.audioData.length} bytes`);
+                play(data.audioData);
+            });
+        });
+    };
+
+    // 3. 녹음 (PTT)
+    const btn = document.getElementById('ptt-btn');
+    btn.onmousedown = async () => {
+        chunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // --- 다이어트 설정: 16kbps (무전기 음질) ---
+        const options = { audioBitsPerSecond: 16000 };
+        recorder = new MediaRecorder(stream, options);
+        
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1];
+                const isLoopback = document.getElementById('loopback-chk').checked;
+                
+                stomp.send("/pub/radio/voice", {}, JSON.stringify({ 
+                    roomId: 1, 
+                    audioData: base64,
+                    timestamp: Date.now() / 1000,
+                    loopback: isLoopback
+                }));
+                log('🎙️ 전송 완료! (루프백: ' + isLoopback + ')');
+            };
+            reader.readAsDataURL(blob);
+        };
+        recorder.start();
+        log('🔴 녹음 중...');
+    };
+    btn.onmouseup = () => { if(recorder) recorder.stop(); };
+
+    // 4. 재생 (Blob URL 방식)
+    function play(base64) {
+        const binary = atob(base64);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+        
+        const blob = new Blob([array], { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play().catch(e => log('재생 에러: ' + e.message));
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+</script>
+
+</body>
+</html>

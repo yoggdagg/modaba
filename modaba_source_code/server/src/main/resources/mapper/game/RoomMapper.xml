@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.s14p11c204.server.domain.game.dao.RoomMapper">
+
+    <insert id="insertRoom" useGeneratedKeys="true" keyProperty="dto.roomId" keyColumn="room_id">
+        INSERT INTO rooms (
+            title, type, max_user, appointment_time,
+            place_name, target_lat, target_lng,
+            host_id, status, region_id, created_at
+        ) VALUES (
+            #{dto.title}, #{dto.roomType}::room_type, #{dto.maxUser}, #{dto.appointmentTime},
+            #{dto.placeName}, #{dto.targetLat}, #{dto.targetLng},
+            #{hostId}, #{status}::room_status, #{dto.regionId}, NOW()
+        )
+    </insert>
+
+    <insert id="insertParticipant">
+        INSERT INTO Room_Participants (room_id, user_id, status)
+        VALUES (#{roomId}, #{userId}, #{status}::participant_status)
+    </insert>
+
+    <select id="findRoomIdByUserId" resultType="long">
+        SELECT room_id FROM Room_Participants WHERE user_id = #{userId}
+    </select>
+
+    <select id="findActiveRoomIdByUserId" resultType="long">
+        SELECT r.room_id 
+        FROM Rooms r
+        JOIN Room_Participants rp ON r.room_id = rp.room_id
+        WHERE rp.user_id = #{userId} 
+        AND r.status = 'PLAYING'
+        LIMIT 1
+    </select>
+
+    <select id="findHostIdByRoomId" resultType="long">
+        SELECT host_id FROM Rooms WHERE room_id = #{roomId}
+    </select>
+
+    <delete id="deleteParticipant">
+        DELETE FROM Room_Participants WHERE room_id = #{roomId} AND user_id = #{userId}
+    </delete>
+
+    <select id="countParticipants" resultType="int">
+        SELECT COUNT(*) FROM Room_Participants WHERE room_id = #{roomId}
+    </select>
+
+    <select id="findOldestParticipant" resultType="long">
+        SELECT user_id FROM Room_Participants
+        WHERE room_id = #{roomId}
+        ORDER BY user_id ASC
+        LIMIT 1
+    </select>
+
+    <update id="updateRoomHost">
+        UPDATE Rooms SET host_id = #{newHostId} WHERE room_id = #{roomId}
+    </update>
+
+    <delete id="deleteRoom">
+        DELETE FROM Rooms WHERE room_id = #{roomId}
+    </delete>
+
+    <delete id="deleteGameSessionsByRoomId">
+        DELETE FROM game_sessions WHERE room_id = #{roomId}
+    </delete>
+
+    <select id="findRoomById" resultType="com.ssafy.s14p11c204.server.domain.game.dto.RoomRequestDto">
+        SELECT
+            room_id as roomId,
+            title,
+            type as roomType,
+            max_user as maxUser,
+            status,
+            region_id as regionId
+        FROM Rooms
+        WHERE room_id = #{roomId}
+    </select>
+
+    <select id="existsParticipant" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM Room_Participants WHERE room_id = #{roomId} AND user_id = #{userId})
+    </select>
+
+    <insert id="insertTestUser">
+        INSERT INTO users (email, nickname, password, provider, created_at)
+        VALUES (#{email}, #{nickname}, 'password123', 'LOCAL', NOW())
+        ON CONFLICT (email) DO NOTHING
+    </insert>
+
+    <insert id="insertTestRegion">
+        INSERT INTO regions (region_id, city, district, neighborhood)
+        VALUES (#{regionId}, #{city}, #{district}, #{neighborhood})
+        ON CONFLICT (region_id) DO NOTHING
+    </insert>
+
+    <select id="findUserIdByEmail" resultType="long">
+        SELECT user_id FROM users WHERE email = #{email}
+    </select>
+
+    <select id="findUserIdByNickname" resultType="long">
+        SELECT user_id FROM users WHERE nickname = #{nickname}
+    </select>
+
+    <select id="findUserMmr" resultType="Integer">
+        SELECT mmr FROM users WHERE user_id = #{userId}
+    </select>
+
+    <select id="findMyRooms" resultType="com.ssafy.s14p11c204.server.domain.game.dto.RoomResponseDto">
+        SELECT
+            r.room_id as roomId,
+            r.title,
+            r.type as roomType,
+            r.max_user as maxUser,
+            r.status,
+            r.appointment_time as appointmentTime,
+            r.place_name as placeName,
+            r.region_id as regionId,
+            CONCAT(reg.city, ' ', reg.district, ' ', reg.neighborhood) as regionName,
+            r.host_id as hostId,
+            u.nickname as hostNickname,
+            (SELECT COUNT(*) FROM Room_Participants rp_count WHERE rp_count.room_id = r.room_id) as currentUserCount
+        FROM Rooms r
+        JOIN Room_Participants rp ON r.room_id = rp.room_id
+        LEFT JOIN Regions reg ON r.region_id = reg.region_id
+        LEFT JOIN Users u ON r.host_id = u.user_id
+        WHERE rp.user_id = #{userId}
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="findAvailableRooms" resultType="com.ssafy.s14p11c204.server.domain.game.dto.RoomResponseDto">
+        SELECT
+            r.room_id as roomId,
+            r.title,
+            r.type as roomType,
+            r.max_user as maxUser,
+            r.status,
+            r.appointment_time as appointmentTime,
+            r.place_name as placeName,
+            r.region_id as regionId,
+            CONCAT(reg.city, ' ', reg.district, ' ', reg.neighborhood) as regionName,
+            r.host_id as hostId,
+            u.nickname as hostNickname,
+            (SELECT COUNT(*) FROM Room_Participants rp_count WHERE rp_count.room_id = r.room_id) as currentUserCount
+        FROM Rooms r
+        LEFT JOIN Regions reg ON r.region_id = reg.region_id
+        LEFT JOIN Users u ON r.host_id = u.user_id
+        WHERE r.room_id NOT IN (
+            SELECT sub_rp.room_id FROM Room_Participants sub_rp WHERE sub_rp.user_id = #{userId}
+        )
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="findRoomsByRegion" resultType="com.ssafy.s14p11c204.server.domain.game.dto.RoomResponseDto">
+        SELECT
+            r.room_id as roomId,
+            r.title,
+            r.type as roomType,
+            r.max_user as maxUser,
+            r.status,
+            r.appointment_time as appointmentTime,
+            r.place_name as placeName,
+            r.region_id as regionId,
+            CONCAT(reg.city, ' ', reg.district, ' ', reg.neighborhood) as regionName,
+            r.host_id as hostId,
+            u.nickname as hostNickname,
+            (SELECT COUNT(*) FROM Room_Participants rp_count WHERE rp_count.room_id = r.room_id) as currentUserCount
+        FROM Rooms r
+        JOIN Regions reg ON r.region_id = reg.region_id
+        LEFT JOIN Users u ON r.host_id = u.user_id
+        <where>
+            <if test="city != null and city != ''">
+                AND reg.city = #{city}
+            </if>
+            <if test="district != null and district != ''">
+                AND reg.district = #{district}
+            </if>
+            <if test="neighborhood != null and neighborhood != ''">
+                AND reg.neighborhood = #{neighborhood}
+            </if>
+        </where>
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="findRoomsStartingSoon" resultType="com.ssafy.s14p11c204.server.domain.game.dto.RoomResponseDto">
+        SELECT
+            room_id as roomId,
+            title,
+            type as roomType,
+            status
+        FROM Rooms
+        WHERE appointment_time BETWEEN #{startTime} AND #{endTime}
+        AND status = 'WAITING'
+        AND is_noti_sent = false
+    </select>
+
+    <update id="updateNotiSent">
+        UPDATE Rooms SET is_noti_sent = #{isNotiSent} WHERE room_id = #{roomId}
+    </update>
+
+    <update id="updateLocationSharingEnabled">
+        UPDATE Room_Participants
+        SET location_sharing_enabled = #{enabled}
+        WHERE room_id = #{roomId} AND user_id = #{userId}
+    </update>
+
+    <update id="updateRoomStatus">
+        UPDATE Rooms SET status = #{status}::room_status WHERE room_id = #{roomId}
+    </update>
+
+    <select id="findRoomsByMmr" resultType="com.ssafy.s14p11c204.server.domain.game.dto.RoomResponseDto">
+        SELECT
+            r.room_id as roomId,
+            r.title,
+            r.type as roomType,
+            r.max_user as maxUser,
+            r.status,
+            r.appointment_time as appointmentTime,
+            r.place_name as placeName,
+            r.region_id as regionId,
+            CONCAT(reg.city, ' ', reg.district, ' ', reg.neighborhood) as regionName,
+            r.host_id as hostId,
+            u.nickname as hostNickname,
+            (
+                SELECT COUNT(*) FROM Room_Participants rp WHERE rp.room_id = r.room_id
+            ) as currentUserCount
+        FROM Rooms r
+        LEFT JOIN Regions reg ON r.region_id = reg.region_id
+        LEFT JOIN Users u ON r.host_id = u.user_id
+        WHERE r.status = 'WAITING'
+        AND (
+            SELECT AVG(sub_u.mmr)
+            FROM Room_Participants sub_rp
+            JOIN Users sub_u ON sub_rp.user_id = sub_u.user_id
+            WHERE sub_rp.room_id = r.room_id
+        ) BETWEEN #{minMmr} AND #{maxMmr}
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="findParticipantIds" resultType="long">
+        SELECT user_id FROM Room_Participants WHERE room_id = #{roomId}
+    </select>
+
+    <update id="updateParticipantRole">
+        UPDATE Room_Participants
+        SET role = #{role}::player_role
+        WHERE room_id = #{roomId} AND user_id = #{userId}
+    </update>
+
+    <update id="updateRoomBoundary">
+        UPDATE Rooms
+        SET boundary = ST_GeomFromText(#{boundaryWkt}, 4326),
+            jail_boundary = ST_GeomFromText(#{jailWkt}, 4326)
+        WHERE room_id = #{roomId}
+    </update>
+
+    <update id="updateAllParticipantsStatus">
+        UPDATE Room_Participants
+        SET status = #{status}::participant_status
+        WHERE room_id = #{roomId}
+    </update>
+
+    <update id="updateParticipantStatus">
+        UPDATE Room_Participants
+        SET status = #{status}::participant_status
+        WHERE room_id = #{roomId} AND user_id = #{userId}
+    </update>
+
+    <select id="findParticipantStatus" resultType="com.ssafy.s14p11c204.server.domain.game.ParticipantStatus">
+        SELECT status FROM Room_Participants
+        WHERE room_id = #{roomId} AND user_id = #{userId}
+    </select>
+
+    <select id="findOtherParticipatingRooms" resultType="long">
+        SELECT room_id FROM Room_Participants
+        WHERE user_id = #{userId} AND room_id != #{currentRoomId}
+    </select>
+
+    <update id="updateAllThievesStatus">
+        UPDATE Room_Participants
+        SET status = #{status}::participant_status
+        WHERE room_id = #{roomId} AND role = 'THIEF'
+    </update>
+
+    <select id="findParticipantsWithNickname" resultType="com.ssafy.s14p11c204.server.domain.game.dto.GameStartResponseDto$ParticipantInfo">
+        SELECT
+            rp.user_id as userId,
+            u.nickname,
+            rp.role
+        FROM Room_Participants rp
+        JOIN Users u ON rp.user_id = u.user_id
+        WHERE rp.room_id = #{roomId}
+    </select>
+
+    <select id="findTimeOverRooms" resultType="long">
+        SELECT r.room_id
+        FROM Rooms r
+        JOIN game_sessions gs ON r.room_id = gs.room_id
+        WHERE r.status = 'PLAYING'
+        AND gs.start_time &lt; #{timeLimit}
+        AND gs.winner_team IS NULL
+    </select>
+
+    <select id="findUserRole" resultType="com.ssafy.s14p11c204.server.domain.game.dto.PlayerRole">
+        SELECT rp.role
+        FROM Room_Participants rp
+        JOIN Users u ON rp.user_id = u.user_id
+        WHERE rp.room_id = #{roomId} AND u.nickname = #{nickname}
+    </select>
+
+    <select id="findParticipantsWithEmail" resultType="com.ssafy.s14p11c204.server.domain.game.dao.RoomMapper$ParticipantEmailInfo">
+        SELECT
+            u.email,
+            rp.role
+        FROM Room_Participants rp
+        JOIN Users u ON rp.user_id = u.user_id
+        WHERE rp.room_id = #{roomId}
+    </select>
+
+    <select id="findEmailByUserId" resultType="string">
+        SELECT email FROM users WHERE user_id = #{userId}
+    </select>
+
+    <!-- 감옥에 있는 모든 도둑 상태 변경 (탈옥) -->
+    <update id="updateAllArrestedThievesToAlive">
+        UPDATE Room_Participants
+        SET status = 'IN_GAME'::participant_status
+        WHERE room_id = #{roomId}
+        AND role = 'THIEF'::player_role
+        AND status = 'ARRESTED'::participant_status
+    </update>
+
+    <!-- 방의 구역 정보 조회 (WKT) -->
+    <select id="findRoomBoundary" resultType="com.ssafy.s14p11c204.server.domain.game.dao.RoomMapper$RoomBoundaryInfo">
+        SELECT
+            ST_AsText(boundary) as boundaryWkt,
+            ST_AsText(jail_boundary) as jailWkt
+        FROM Rooms
+        WHERE room_id = #{roomId}
+    </select>
+
+</mapper>

@@ -1,0 +1,65 @@
+
+### 네이버 Oauth 테스트
+POST https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=KCE5OxkUNIrHLl8xu6ki&state=NAVER_LOGIN_TEST&redirect_uri=http://127.0.0.1:8080/api/v0/oauth/naver/callback
+Content-Type: application/json
+
+{
+
+}
+
+### 카카오 인가 코드 요청 (REST Client 호환 방식)
+POST https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=d35970a555ae08697bcd341f65151bb3&redirect_uri=http://localhost:8080/api/v0/oauth/kakao/callback&state=test_state
+
+{
+
+}
+
+
+### =====================================================
+
+### EC2 서버 네이버 Oauth 테스트
+POST https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=KCE5OxkUNIrHLl8xu6ki&state=NAVER_LOGIN_TEST&redirect_uri=https://c204.hanuon.com/api/v0/oauth/naver/callback
+Content-Type: application/json
+
+{
+
+}
+
+### EC2 서버 카카오 인가 코드 요청 (REST Client 호환 방식)
+POST https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=d35970a555ae08697bcd341f65151bb3&redirect_uri=https://c204.hanuon.com/api/v0/oauth/kakao/callback&state=test_state
+
+{
+
+}
+
+### =====================================================
+### 이메일 인증코드 발송 테스트
+POST http://localhost:8080/api/v0/auth/send-code
+Content-Type: application/json
+
+{
+    "email": "yohan0924@naver.com"
+}
+
+### 비밀번호 초기화 인증 코드 검증 테스트
+POST http://localhost:8080/api/v0/auth/verify-code
+Content-Type: application/json
+
+{
+    "email": "yohan0924@naver.com",
+    "code": "363439"
+}
+
+### 비밀번호 실제 초기화 테스트
+POST http://localhost:8080/api/v0/auth/reset-pw
+Content-Type: application/json
+
+{
+    "email": "yohan0924@naver.com",
+    "code": "363439",
+    "password": "fsdaf!dsfd3"
+}
+
+### =====================================================
+### AI 연결 테스트
+GET http://localhost:8080/api/v0/ai/test

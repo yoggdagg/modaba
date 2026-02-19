@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.s14p11c204.server.domain.game.dao.ReportMapper">
+
+    <insert id="insertReport" useGeneratedKeys="true" keyProperty="reportId">
+        INSERT INTO study_reports (session_id, user_id, report_content, summary, created_at)
+        VALUES (#{sessionId}, #{userId}, #{content}, #{summary}, NOW())
+    </insert>
+
+    <select id="findFocusScores" resultType="string">
+        SELECT focus_scores::text 
+        FROM focus_records 
+        WHERE session_id = #{sessionId} AND user_id = #{userId}
+    </select>
+
+</mapper>

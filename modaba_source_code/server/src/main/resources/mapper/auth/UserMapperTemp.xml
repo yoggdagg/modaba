@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.s14p11c204.server.domain.user.dao.UserMapperTemp">
+
+    <!-- User 테이블과 User 객체 매핑 -->
+    <resultMap id="CurrentUserResultMap" type="com.ssafy.s14p11c204.server.domain.user.dto.CurrentUser">
+        <constructor>
+            <idArg column="user_id" javaType="Long"/>
+            <arg column="email" javaType="String"/>
+            <arg column="nickname" javaType="String"/>
+            <arg column="password" javaType="String"/>
+            <arg column="role" javaType="com.ssafy.s14p11c204.server.domain.user.User$Role"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="GyeongdoRecordMap" type="com.ssafy.s14p11c204.server.domain.game.dto.GyeongdoRecord">
+        <constructor>
+            <arg column="user_id" javaType="long"/>
+            <arg column="police_win" javaType="Integer"/>
+            <arg column="police_lose" javaType="Integer"/>
+            <arg column="imprisoning_cnt" javaType="Integer"/>
+            <arg column="thief_win" javaType="Integer"/>
+            <arg column="thief_lose" javaType="Integer"/>
+            <arg column="rescuing_cnt" javaType="Integer"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="AppointmentRecordMap" type="com.ssafy.s14p11c204.server.domain.social.dto.AppointmentRecord">
+    </resultMap>
+
+    <resultMap id="ProfileDetailResponseMap" type="com.ssafy.s14p11c204.server.domain.user.dto.ProfileDetailResponse">
+        <constructor>
+            <idArg column="user_id" javaType="long"/>
+            <arg column="nickname" javaType="String"/>
+            <arg column="image_link" javaType="String"/>
+
+            <arg resultMap="GyeongdoRecordMap" javaType="com.ssafy.s14p11c204.server.domain.game.dto.GyeongdoRecord"/>
+
+            <arg resultMap="AppointmentRecordMap"
+                 javaType="com.ssafy.s14p11c204.server.domain.social.dto.AppointmentRecord"
+                 column="dummy_appointment"/>
+        </constructor>
+    </resultMap>
+
+    <!-- UID로 사용자 인증 조회 (비밀번호 재설정 시 사용) -->
+    <select id="selectCurrentUserById" parameterType="long" resultMap="CurrentUserResultMap">
+        SELECT user_id, email, nickname, password, role
+        FROM users
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 이메일로 사용자 인증 조회 (로그인, 비밀번호 초기화 시 사용) -->
+    <select id="selectCurrentUserByEmail" parameterType="string" resultMap="CurrentUserResultMap">
+        SELECT user_id, email, nickname, password, role
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <update id="updateProfile">
+        UPDATE users
+        <set>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="imageUrl != null">profile_image_url = #{imageUrl},</if>
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE users
+        SET
+            password = #{newPassword},
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <select id="selectDetailedProfile" resultMap="ProfileDetailResponseMap">
+        SELECT
+            u.user_id,
+            u.nickname,
+            u.profile_image_url as image_link,
+            -- 경도 전적 데이터 (없으면 0)
+            COALESCE(g.police_win, 0) as police_win,
+            COALESCE(g.police_lose, 0) as police_lose,
+            COALESCE(g.imprisoning_cnt, 0) as imprisoning_cnt,
+            COALESCE(g.thief_win, 0) as thief_win,
+            COALESCE(g.thief_lose, 0) as thief_lose,
+            COALESCE(g.rescuing_cnt, 0) as rescuing_cnt,
+            -- AppointmentRecord는 차순위이므로 현재는 NULL 처리
+            NULL as dummy_appointment
+        FROM users u
+                 LEFT OUTER JOIN gyeongdo_records g ON u.user_id = g.user_id
+        WHERE u.user_id = #{userId}
+    </select>
+
+</mapper>

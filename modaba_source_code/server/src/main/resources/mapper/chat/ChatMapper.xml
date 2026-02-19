@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.s14p11c204.server.domain.chat.mapper.ChatMapper">
+
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="logId" keyColumn="log_id">
+        INSERT INTO chat_logs (room_id, sender_id, message, type, target_role, created_at)
+        VALUES (#{roomId}, #{senderId}, #{message}, CAST(#{type} AS VARCHAR), #{targetRole}::player_role, NOW())
+    </insert>
+
+    <select id="findMessagesByRoomId" resultType="com.ssafy.s14p11c204.server.domain.chat.dto.ChatMessageDto">
+        SELECT
+            c.log_id as logId,
+            c.room_id as roomId,
+            c.sender_id as senderId,
+            u.nickname as senderNickname,
+            c.message,
+            c.type,
+            c.target_role as targetRole,
+            c.created_at as createdAt
+        FROM chat_logs c
+        LEFT JOIN users u ON c.sender_id = u.user_id
+        WHERE c.room_id = #{roomId}
+        <if test="since != null">
+            AND c.created_at >= #{since}
+        </if>
+        <if test="lastLogId != null">
+            AND c.log_id &lt; #{lastLogId}
+        </if>
+        ORDER BY c.log_id DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -1,0 +1,61 @@
+# --- 1. 빌드 및 실행 결과물 (Build & Execution) ---
+# 컴파일된 클래스 파일과 배포용 JAR 파일이 생성되는 곳입니다.
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+bin/
+*.jar
+*.war
+*.ear
+
+# --- 2. IDE 설정 파일 (IDE Settings) ---
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+# --- 3. 보안 및 민감한 설정 (Security & Configs) ---
+# DB 비밀번호, API 키 등 민감 정보가 포함된 파일은 절대 금지입니다.
+application-local.yml
+application-local.properties
+application-secret.yml
+application-secret.properties
+postgres_data/
+.env
+
+# --- 4. 로그 및 임시 파일 (Logs & Temp) ---
+# 서버 실행 중 생성되는 기록물입니다.
+*.log
+logs/
+tmp/
+
+# --- 5. 운영체제 관련 (OS Specific) ---
+.DS_Store
+Thumbs.db
+Desktop.ini

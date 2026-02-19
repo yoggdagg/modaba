@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.s14p11c204.server.domain.game.dao.ActivityMapper">
+
+    <resultMap id="ActivityRecordMap" type="com.ssafy.s14p11c204.server.domain.game.dto.ActivityRecord">
+        <constructor>
+            <idArg column="activity_id" name="id" javaType="Long"/>
+            <arg column="session_id" name="sessionId" javaType="Long"/>
+            <arg column="user_id" name="userId" javaType="Long"/>
+            <arg column="trajectory" name="trajectory" javaType="String"/>
+            <arg column="total_distance" name="totalDistance" javaType="Double"/>
+            <arg column="avg_speed" name="avgSpeed" javaType="Double"/>
+            <arg column="max_speed" name="maxSpeed" javaType="Double"/>
+            <arg column="active_time_sec" name="activeTime" javaType="Integer"/>
+            <arg column="activity_score" name="score" javaType="Integer"/>
+            <arg column="ai_report" name="aiReport" javaType="String"/>
+            <arg column="created_at" name="createdAt" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insertActivity" parameterType="com.ssafy.s14p11c204.server.domain.game.dto.ActivityRecord">
+        INSERT INTO user_game_activities (
+            session_id, user_id, trajectory, 
+            total_distance, avg_speed, max_speed, 
+            active_time_sec, activity_score, ai_report
+        ) VALUES (
+            #{sessionId}, #{userId}, #{trajectory}::jsonb, 
+            #{totalDistance}, #{avgSpeed}, #{maxSpeed}, 
+            #{activeTime}, #{score}, #{aiReport}::jsonb
+        )
+    </insert>
+
+    <select id="findByUserId" resultMap="ActivityRecordMap">
+        SELECT * 
+        FROM user_game_activities
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findBySessionAndUser" resultMap="ActivityRecordMap">
+        SELECT * 
+        FROM user_game_activities
+        WHERE session_id = #{sessionId} AND user_id = #{userId}
+    </select>
+
+</mapper>

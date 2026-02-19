@@ -1,0 +1,62 @@
+### 환경 변수 설정 (파일 상단에 선언하거나 settings.json에서 관리 가능)
+@hostname = localhost
+@port = 8081
+@baseUrl = http://{{hostname}}:{{port}}/api/v0/auth
+
+### 1. 회원가입 테스트 (성공 케이스)
+
+# @name signup
+
+POST https://c204.hanuon.com/api/v0/auth
+Content-Type: application/json
+
+{
+
+    "email": "yohan1@naver.com",
+
+    "password": "qwer1234!",
+
+    "nickname": "요한1",
+
+    "role": "ADMIN"
+
+}
+
+
+
+### 2. 로그인 테스트 (성공 케이스)
+
+# 회원가입 후 이메일/비밀번호로 토큰 요청
+
+# @name login
+
+POST {{baseUrl}}/log-in
+Content-Type: application/json
+
+{
+
+    "email": "yohan0924@naver.com",
+
+    "password": "qwer1234!"
+
+}
+
+### 로그아웃 테스트
+POST {{baseUrl}}/log-out
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5b2hhbjA5MjRAbmF2ZXIuY29tIiwiaWF0IjoxNzY4OTcxNzgzLCJleHAiOjE3Njg5NzUzODMsInVzZXJJZCI6MTksInR5cGUiOiJhY2Nlc3MiLCJuaWNrbmFtZSI6IuyalO2VnCJ9.4AWBYc4CYJn5GaKyM6wQi1Fu5pXpb2EbeD5j4GMFoJM
+Content-Type: application/json
+
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5b2hhbjA5MjRAbmF2ZXIuY29tIiwiaWF0IjoxNzY4OTcxNzgzLCJleHAiOjE3NzAxODEzODMsInR5cGUiOiJyZWZyZXNoIn0.RhTFyOJjGKtx_1AnHxqXc-EzIpFLWzAApeZgY9ZCHB8"
+}
+
+
+### 카카오 로그인 테스트
+GET http://localhost:8081/api/v0/oauth/kakao/authorize
+Content-Type: application/json
+
+{
+    "accessToken": "ClkruJYwVlDgDrpcY3Fl_Jg85ACovSpHAAAAAQoNIdkAAAGcAuipiOQ1KlcE_6bt"
+}
+
+###

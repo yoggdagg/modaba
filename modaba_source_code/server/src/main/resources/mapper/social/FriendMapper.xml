@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.s14p11c204.server.domain.social.mapper.FriendMapper">
+
+    <resultMap id="FriendshipResultMap" type="com.ssafy.s14p11c204.server.domain.social.Friendship">
+        <constructor>
+            <arg name="requesterId" column="requester_id" javaType="Long"/>
+            <arg name="receiverId" column="receiver_id" javaType="Long"/>
+            <arg name="status" column="status" javaType="com.ssafy.s14p11c204.server.domain.social.Friendship$Status"/>
+            <arg name="createdAt" column="created_at" javaType="java.time.LocalDateTime"/>
+            <arg name="updatedAt" column="updated_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="ProfileSimpleResultMap" type="com.ssafy.s14p11c204.server.domain.user.dto.ProfileSimpleResponse">
+        <constructor>
+            <idArg name="id" javaType="Long" column="user_id"/>
+            <arg name="nickname" javaType="String" column="nickname"/>
+            <arg name="imageLink" javaType="String" column="profile_image_url"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="upsert">
+        INSERT INTO friendships (requester_id, receiver_id, status, created_at, updated_at)
+        VALUES (
+                   #{requesterId},
+                   #{receiverId},
+                   #{status}::friendship_status,
+                   NOW(),
+                   NOW()
+               )
+            ON CONFLICT (requester_id, receiver_id)
+        DO UPDATE SET
+            status = #{status}::friendship_status,
+                           updated_at = NOW()
+    </insert>
+
+    <select id="showRelation" resultMap="FriendshipResultMap">
+        SELECT requester_id,
+               receiver_id,
+               status,
+               created_at,
+               updated_at
+        FROM friendships
+        WHERE requester_id = #{requesterId}
+          AND receiver_id = #{receiverId}
+    </select>
+
+    <select id="findPending" resultMap="ProfileSimpleResultMap">
+        SELECT u.user_id, u.nickname, u.profile_image_url
+        FROM friendships f
+                 JOIN users u ON f.requester_id = u.user_id
+        WHERE f.receiver_id = #{myId}       -- 나(receiver)에게 온 요청
+          AND f.status = 'PENDING'
+          AND NOT EXISTS (                  -- 맞차단 필터링
+            SELECT 1
+            FROM friendships f2
+            WHERE f2.requester_id = #{myId}         -- 내가(requester)
+              AND f2.receiver_id = f.requester_id   -- 상대방(receiver)을
+              AND f2.status = 'REJECTED'            -- 차단했는지 확인
+        )
+    </select>
+
+    <select id="findFriends" resultMap="ProfileSimpleResultMap">
+        SELECT u.user_id, u.nickname, u.profile_image_url
+        FROM friendships f
+                 JOIN users u ON f.receiver_id = u.user_id
+        WHERE f.requester_id = #{myId}
+          AND f.status = 'ACCEPTED'
+    </select>
+
+    <select id="findBlocked" resultMap="ProfileSimpleResultMap">
+        SELECT u.user_id, u.nickname, u.profile_image_url
+        FROM friendships f
+                 JOIN users u ON f.receiver_id = u.user_id
+        WHERE f.requester_id = #{myId}
+          AND f.status = 'REJECTED'
+    </select>
+
+    <delete id="delete">
+        DELETE
+        FROM friendships
+        WHERE requester_id = #{requesterId}
+          AND receiver_id = #{receiverId}
+    </delete>
+
+</mapper>

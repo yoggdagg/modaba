@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+</head>
+
+<body>
+
+    <h1>Index Page</h1>
+
+    <!-- Naver Login Image & Button -->
+    <button onclick="showNaverLoginPopup();"><img width="200" height="50" src="/server/src/main/resources/static/images/btnG_완성형.png"></button>
+
+    <!-- Kakao Login Image & Button -->
+    <button onclick="showKakaoLoginPopup();"><img width="200" height="50" src="/server/src/main/resources/static/images/kakao_login_medium_narrow.png"></button>
+</body>
+
+<script>
+
+    // 네이버 로그인을 위한 팝업창 생성
+    function showNaverLoginPopup() {
+        let uri = 'https://nid.naver.com/oauth2.0/authorize?' +
+            'response_type=code' +                  // 인증과정에 대한 내부 구분값 code 로 전공 (고정값)
+            '&client_id=KCE5OxkUNIrHLl8xu6ki' +     // 발급받은 client_id 를 입력
+            '&state=NAVER_LOGIN_TEST' +             // CORS 를 방지하기 위한 특정 토큰값(임의값 사용)
+            '&redirect_uri=http://127.0.0.1:8081/api/v0/oauth/naver/callback';   // 어플케이션에서 등록했던 CallBack URL를 입력
+
+        // 사용자가 사용하기 편하게끔 팝업창으로 띄어준다.
+        window.open(uri, "Naver Login Test PopupScreen", "width=450, height=600");
+    }
+
+    
+    // 카카오 로그인을 위한 팝업창 생성
+    function showKakaoLoginPopup() {
+        const clientId = 'f69e92837dcee37d5e12227875df8a35';  // ⚠️ 카카오 REST API 키로 변경 필요!
+        const redirectUri = encodeURIComponent('http://localhost:8081/api/v0/oauth/kakao/callback');
+        
+        let uri = 'https://kauth.kakao.com/oauth/authorize?' +
+            'response_type=code' +                  // 인증과정에 대한 내부 구분값 code로 전송 (고정값)
+            '&client_id=' + clientId +              // 카카오 REST API 키
+            '&redirect_uri=' + redirectUri;         // 애플리케이션에서 등록했던 Redirect URI
+
+        // 사용자가 사용하기 편하게끔 팝업창으로 띄어준다.
+        window.open(uri, "Kakao Login Popup", "width=450, height=600");
+    }
+
+</script>
+
+</html>
