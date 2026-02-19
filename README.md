@@ -142,7 +142,7 @@ modaba/
 
 ### 2. 환경 변수 설정
 
-`modaba_source_code/` 디렉토리에 `.env` 파일을 생성합니다. (실제 시크릿값은 `exec/.env` 파일 참조)
+`modaba_source_code/` 디렉토리에 `.env` 파일을 생성합니다. 
 
 ```env
 # Server Config
@@ -183,7 +183,6 @@ docker-compose up -d --build
 1. **Build Stage**: `gradle:8.5-jdk21-alpine` 환경에서 `clean bootJar` 수행
 2. **Runtime Stage**: `eclipse-temurin:21-jre-alpine` 환경으로 빌드된 `app.jar`만 복사하여 경량화된 컨테이너 실행
 
-> 로컈 개발 환경에서는 `docker-compose -f docker-compose-local.yml up -d --build` 사용
 
 ### 4. DB 초기화
 
@@ -194,12 +193,6 @@ schema.sql  →  /docker-entrypoint-initdb.d/01-initSchema.sql
 data.sql    →  /docker-entrypoint-initdb.d/02-initData.sql
 ```
 
-행정구역 데이터는 별도 스크립트로 초기화합니다:
-
-```bash
-cd modaba_source_code
-python3 init_regions.py
-```
 
 ### 5. Android 클라이언트 빌드
 
@@ -242,5 +235,5 @@ python3 init_regions.py
 ---
 
 <div align="center">
-  <sub>⚡ SSAFY 12기 공통 프로젝트 | 삼성 청년 SW 아카데미</sub>
+  <sub>⚡ SSAFY 14기 공통 프로젝트 | 삼성 청년 SW 아카데미</sub>
 </div>
